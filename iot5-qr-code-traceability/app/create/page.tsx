@@ -1,13 +1,14 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import QRCode from 'qrcode';
-import { QrCode, Download, ExternalLink, Sparkles } from 'lucide-react';
+import { useState } from "react";
+import QRCode from "qrcode";
+import { QrCode, Download, ExternalLink, Sparkles } from "lucide-react";
+import { getProduct } from "@/actions/product";
 
-export default function CreateNFTProductQR() {
-  const [formData, setFormData] = useState({
-    policyId: '',
-    assetName: '',
+export default function Create() {
+  const [form, setForm] = useState({
+    issuer: "",
+    productName: "",
   });
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [productUrl, setProductUrl] = useState<string | null>(null);
@@ -15,24 +16,23 @@ export default function CreateNFTProductQR() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setQrCodeUrl(null); 
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+    setQrCodeUrl(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.policyId.trim() || !formData.assetName.trim()) return;
-
-    const policy = formData.policyId.trim().toLowerCase();
-    if (!/^[0-9a-f]{56}$/.test(policy)) {
-      alert('Policy ID must be a valid 56-character hexadecimal string!');
-      return;
-    }
+    if (!form.issuer.trim() || !form.productName.trim()) return;
 
     setLoading(true);
-
-    const assetName = formData.assetName.trim();
-    const id = policy + assetName; 
+    const product = await getProduct({
+      owner: form.issuer,
+      assetName: form.productName,
+    });
+    console.log(product);
+    const assetName = form.productName.trim();
+    const id = (product.policyId as string) + (product.assetName as string);
     setProductId(id);
 
     const url = `${window.location.origin}/product/${id}`;
@@ -40,14 +40,14 @@ export default function CreateNFTProductQR() {
 
     try {
       const qr = await QRCode.toDataURL(url, {
-        errorCorrectionLevel: 'H',
+        errorCorrectionLevel: "H",
         width: 512,
         margin: 4,
-        color: { dark: '#1e293b', light: '#ffffff' },
+        color: { dark: "#1e293b", light: "#ffffff" },
       });
       setQrCodeUrl(qr);
     } catch (err) {
-      alert('Error generating QR code!');
+      alert("Error generating QR code!");
     }
 
     setLoading(false);
@@ -66,7 +66,9 @@ export default function CreateNFTProductQR() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 mb-6 px-6 py-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg border border-white/50">
             <QrCode className="w-6 h-6 text-blue-600" />
-            <span className="font-semibold text-slate-700">Generate Cardano NFT QR Code</span>
+            <span className="font-semibold text-slate-700">
+              Generate Cardano NFT QR Code
+            </span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4">
             QR Code Linking to Your Product Page
@@ -82,31 +84,31 @@ export default function CreateNFTProductQR() {
             <form onSubmit={handleSubmit} className="space-y-7">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Policy ID <span className="text-red-500">*</span>
+                  Issuer Address <span className="text-red-500">*</span>
                 </label>
                 <input
-                  name="policyId"
+                  name="issuer"
                   type="text"
                   required
-                  value={formData.policyId}
+                  value={form.issuer}
                   onChange={handleChange}
                   className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                  placeholder="e.g., 0e14267a8020229adc0184dd25fa3174c3f7d6caadcb4425c70e7c04"
+                  placeholder="e.g., addr1q9..."
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Asset Name (text) <span className="text-red-500">*</span>
+                  Product Name (text) <span className="text-red-500">*</span>
                 </label>
                 <input
-                  name="assetName"
+                  name="productName"
                   type="text"
                   required
-                  value={formData.assetName}
+                  value={form.productName}
                   onChange={handleChange}
                   className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                  placeholder="e.g., unsig26071 or SpaceBud3269"
+                  placeholder="e.g., Apple Vision 2024"
                 />
               </div>
 
@@ -132,7 +134,9 @@ export default function CreateNFTProductQR() {
             {qrCodeUrl ? (
               <div className="text-center space-y-8">
                 <div>
-                  <p className="text-lg font-medium text-slate-600 mb-2">Product ID (policy + asset name)</p>
+                  <p className="text-lg font-medium text-slate-600 mb-2">
+                    Product ID (policy + asset name)
+                  </p>
                   <p className="text-xl font-bold text-blue-600 font-mono tracking-wider break-all">
                     {productId}
                   </p>

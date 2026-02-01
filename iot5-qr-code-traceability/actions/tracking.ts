@@ -15,7 +15,6 @@ export const getTracking = async function ({
   const transacitons = await blockfrostApi.assetsTransactions(
     policyId + assetName,
   );
-  console.log(transacitons)
   const histories = await Promise.all(
     transacitons.map(async function ({ tx_hash }) {
       const specialTransaction =
