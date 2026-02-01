@@ -60,16 +60,16 @@ export class MeshAdapter {
   protected spendScript!: PlutusScript;
 
   public policyId!: string;
-  protected contractAddress!: string;
+  public contractAddress!: string;
   protected meshTxBuilder: MeshTxBuilder;
 
   constructor({
     wallet,
-    owners,
+    owner,
     provider,
   }: {
     wallet: MeshWallet;
-    owners: Array<string>;
+    owner?: string;
     provider: BlockfrostProvider;
   }) {
     this.wallet = wallet;
@@ -83,10 +83,10 @@ export class MeshAdapter {
       "traceability.mint.mint",
     );
     this.mintScriptCbor = applyParamsToScript(this.mintCompileCode, [
-      owners.map((owner) => mPubKeyAddress(
-        deserializeAddress(owner).pubKeyHash,
-        deserializeAddress(owner).stakeCredentialHash,
-      )),
+       mPubKeyAddress(
+        deserializeAddress(owner || walletAddress).pubKeyHash,
+        deserializeAddress(owner || walletAddress).stakeCredentialHash,
+      ),
     ]);
     this.mintScript = { code: this.mintScriptCbor, version: "V3" };
     this.policyId = resolveScriptHash(this.mintScriptCbor, "V3");
@@ -95,10 +95,10 @@ export class MeshAdapter {
       "traceability.store.spend",
     );
     this.spendScriptCbor = applyParamsToScript(this.spendCompileCode, [
-      owners.map((owner) => mPubKeyAddress(
-        deserializeAddress(owner).pubKeyHash,
-        deserializeAddress(owner).stakeCredentialHash,
-      )),
+      mPubKeyAddress(
+        deserializeAddress(owner || walletAddress).pubKeyHash,
+        deserializeAddress(owner || walletAddress).stakeCredentialHash,
+      ),
     ]);
     this.spendScript = { code: this.spendScriptCbor, version: "V3" };
     this.contractAddress = serializePlutusScript(

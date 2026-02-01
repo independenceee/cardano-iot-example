@@ -14,20 +14,15 @@ const wallet = new MeshWallet({
 });
 
 // 0 => addr_test1qrrsqzvu048737jnqq7rd3ck07e7cnk75x5wmdlt9zv7ptmqwvk3ckjxl4wcf6ehtynh8lctuu85xxdg9c8v5pfnjn4shn35yc
-// 1 => addr_test1qryamep6l09mtjswn000l3jd79pls9pt5aj0nsf5cyfdp3xmj9k859jpvfpqepllgqn02473mlhttcf3lyujlpzhrk3qcndhyw
-// 2 => addr_test1qrw7yktcc7wsscq46pfamt8t9yd2mlp7dtgjw3mq2hqplgvax05kaj8z5tgvtqd5q4xug4qqdgnzn2l8krm09c85f4psmzum9f
 
-const owners: Array<string> = [
-  "addr_test1qrrsqzvu048737jnqq7rd3ck07e7cnk75x5wmdlt9zv7ptmqwvk3ckjxl4wcf6ehtynh8lctuu85xxdg9c8v5pfnjn4shn35yc",
-  "addr_test1qryamep6l09mtjswn000l3jd79pls9pt5aj0nsf5cyfdp3xmj9k859jpvfpqepllgqn02473mlhttcf3lyujlpzhrk3qcndhyw",
-  "addr_test1qrw7yktcc7wsscq46pfamt8t9yd2mlp7dtgjw3mq2hqplgvax05kaj8z5tgvtqd5q4xug4qqdgnzn2l8krm09c85f4psmzum9f",
-];
+const owner =
+  "addr_test1qrrsqzvu048737jnqq7rd3ck07e7cnk75x5wmdlt9zv7ptmqwvk3ckjxl4wcf6ehtynh8lctuu85xxdg9c8v5pfnjn4shn35yc";
 
 export const mint = async () => {
   const contract = new Contract({
     wallet: wallet,
     provider: provider,
-    owners: owners,
+    owner: owner,
   });
   const assetName = "Huawei Watch GT4 Pro";
   const unsignedTx: string = await contract.mint({
@@ -60,10 +55,9 @@ export const update = async () => {
   const contract = new Contract({
     wallet: wallet,
     provider: provider,
-    owners: owners,
+    owner: owner,
   });
   const assetName = "Huawei Watch GT4 Pro";
-
   const unsignedTx: string = await contract.update({
     assetName: assetName,
     metadata: {
@@ -77,7 +71,7 @@ export const update = async () => {
       image: "ipfs://QmYourIPFSHashhuaweiwatchgt4frontpng",
       mediaType: "image/png",
       roadmap: "[Ha Noi, Hung Yen, Hai Duong, Hai Phong]",
-      location: "Hung Yen",
+      location: "Hai Duong",
     },
   });
   const signedTx = await wallet.signTx(unsignedTx, true);
@@ -93,9 +87,9 @@ export const burn = async () => {
   const contract = new Contract({
     wallet: wallet,
     provider: provider,
-    owners: owners,
+    owner: owner,
   });
-  const assetName = "GT4";
+  const assetName = "Huawei Watch GT4 Pro";
   const unsignedTx: string = await contract.burn({
     assetName: assetName,
   });

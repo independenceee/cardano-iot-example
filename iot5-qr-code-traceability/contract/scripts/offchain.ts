@@ -1,10 +1,7 @@
 import {
-    assocMap,
-    byteString,
     CIP68_100,
     CIP68_222,
     deserializeAddress,
-    integer,
     mConStr0,
     mConStr1,
     metadataToCip68,
