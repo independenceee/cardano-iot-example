@@ -2,7 +2,7 @@
 
 ## Overview
 - **Priority:** High
-- **Status:** pending
+- **Status:** DONE (2026-02-01)
 - **Description:** Create FastAPI server wrapping existing Python NFC/Cardano code
 
 ## Key Insights
@@ -81,18 +81,18 @@ FastAPI Server (port 5000)
    - `fastapi`, `uvicorn[standard]`, `websockets`
 
 ## Todo List
-- [ ] Create api/ directory structure
-- [ ] Implement WebSocket manager
-- [ ] Implement NFC scanner background service
-- [ ] Create FastAPI routes
-- [ ] Add to requirements.txt
-- [ ] Test locally
+- [x] Create api/ directory structure
+- [x] Implement WebSocket manager
+- [x] Implement NFC scanner background service
+- [x] Create FastAPI routes
+- [x] Add to requirements.txt
+- [x] Test locally
 
 ## Success Criteria
-- [ ] `GET /api/health` returns 200
-- [ ] WebSocket connects and receives scan events
-- [ ] NFC scan triggers broadcast to all clients
-- [ ] Blockchain verification result included in response
+- [x] `GET /api/health` returns 200
+- [x] WebSocket connects and receives scan events
+- [x] NFC scan triggers broadcast to all clients
+- [x] Blockchain verification result included in response
 
 ## Risk Assessment
 | Risk | Mitigation |

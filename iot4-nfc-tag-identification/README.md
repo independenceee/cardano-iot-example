@@ -17,14 +17,38 @@ Decentralized student identification system using NFC tags verified against Card
 
 ## Connection
 
-| PN532 Pin | Raspberry Pi Pin |
-| --------- | ---------------- |
-| SCK       | SCK (GPIO 11)    |
-| MOSI      | MOSI (GPIO 10)   |
-| MISO      | MISO (GPIO 9)    |
-| CS        | D5 (GPIO 5)      |
-| GND       | GND              |
-| VCC       | 3.3V             |
+### Pin Diagram
+
+```
+PN532 NFC Module              Raspberry Pi
+┌──────────┐                  ┌──────────────────┐
+│          │                  │                  │
+│    SCK ──┼──────────────────┼── GPIO 11 (Pin 23)
+│   MOSI ──┼──────────────────┼── GPIO 10 (Pin 19)
+│   MISO ──┼──────────────────┼── GPIO 9  (Pin 21)
+│  SS/CS ──┼──────────────────┼── GPIO 5  (Pin 29)
+│    VCC ──┼──────────────────┼── 3.3V    (Pin 1)
+│    GND ──┼──────────────────┼── GND     (Pin 6)
+│          │                  │                  │
+└──────────┘                  └──────────────────┘
+```
+
+### Pin Table
+
+| PN532 Pin | Raspberry Pi | GPIO    | Description            |
+| --------- | ------------ | ------- | ---------------------- |
+| SCK       | Pin 23       | GPIO 11 | SPI Clock              |
+| MOSI      | Pin 19       | GPIO 10 | Master Out Slave In    |
+| MISO      | Pin 21       | GPIO 9  | Master In Slave Out    |
+| SS/CS     | Pin 29       | GPIO 5  | Chip Select            |
+| VCC       | Pin 1 or 17  | -       | 3.3V Power             |
+| GND       | Pin 6, 9, 14 | -       | Ground                 |
+
+### Notes
+
+- Set PN532 to **SPI mode** via DIP switch/jumper
+- Enable SPI: `sudo raspi-config` → Interface Options → SPI
+- Use **3.3V only** (not 5V)
 
 ## Installation
 

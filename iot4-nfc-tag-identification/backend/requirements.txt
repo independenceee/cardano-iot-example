@@ -1,0 +1,8 @@
+adafruit-circuitpython-pn532
+lgpio
+pycardano
+python-dotenv
+requests
+fastapi
+uvicorn[standard]
+websockets

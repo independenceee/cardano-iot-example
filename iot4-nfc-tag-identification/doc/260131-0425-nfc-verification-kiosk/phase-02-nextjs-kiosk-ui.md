@@ -2,7 +2,7 @@
 
 ## Overview
 - **Priority:** High
-- **Status:** pending
+- **Status:** DONE (2026-02-01)
 - **Description:** Build full-screen kiosk verification display
 
 ## Key Insights
@@ -110,22 +110,22 @@ Next.js App (port 3000)
    - Checkmark/X icon animations
 
 ## Todo List
-- [ ] Initialize Next.js project
-- [ ] Setup Tailwind with dark theme
-- [ ] Create WebSocket hook
-- [ ] Build idle screen component
-- [ ] Build verifying screen component
-- [ ] Build result screen component
-- [ ] Implement state transitions
-- [ ] Add animations
-- [ ] Test with mock data
+- [x] Initialize Next.js project
+- [x] Setup Tailwind with dark theme
+- [x] Create WebSocket hook
+- [x] Build idle screen component
+- [x] Build verifying screen component
+- [x] Build result screen component
+- [x] Implement state transitions
+- [x] Add animations
+- [x] Test with mock data
 
 ## Success Criteria
-- [ ] Full-screen display works
-- [ ] WebSocket connects to backend
-- [ ] State transitions are smooth
-- [ ] Text readable from 2 meters
-- [ ] Auto-reset works correctly
+- [x] Full-screen display works
+- [x] WebSocket connects to backend
+- [x] State transitions are smooth
+- [x] Text readable from 2 meters
+- [x] Auto-reset works correctly
 
 ## Risk Assessment
 | Risk | Mitigation |
