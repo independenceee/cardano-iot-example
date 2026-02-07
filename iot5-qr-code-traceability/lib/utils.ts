@@ -1,6 +1,7 @@
 import cbor from "cbor";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import axios from 'axios';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -66,3 +67,21 @@ export function convertToKeyValue(
     }),
   );
 }
+
+
+export const api = axios.create({
+  baseURL: '/api', 
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('Axios error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
+
