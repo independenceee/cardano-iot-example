@@ -8,7 +8,7 @@ import {
   mPubKeyAddress,
   type PlutusScript,
   resolveScriptHash,
-  serializeAddressObj,
+  Data,
   serializePlutusScript,
   type UTxO,
 } from "@meshsdk/core";
@@ -69,7 +69,7 @@ export class MeshAdapter {
     provider,
   }: {
     wallet: MeshWallet;
-    owner?: string;
+    owner: string;
     provider: BlockfrostProvider;
   }) {
     this.wallet = wallet;
@@ -77,15 +77,14 @@ export class MeshAdapter {
     this.meshTxBuilder = new MeshTxBuilder({
       fetcher: provider,
     });
-    const walletAddress = this.wallet.getChangeAddress();
     this.mintCompileCode = this.readValidator(
       blueprint,
       "traceability.mint.mint",
     );
     this.mintScriptCbor = applyParamsToScript(this.mintCompileCode, [
-       mPubKeyAddress(
-        deserializeAddress(owner || walletAddress).pubKeyHash,
-        deserializeAddress(owner || walletAddress).stakeCredentialHash,
+      mPubKeyAddress(
+        deserializeAddress(owner).pubKeyHash,
+        deserializeAddress(owner).stakeCredentialHash,
       ),
     ]);
     this.mintScript = { code: this.mintScriptCbor, version: "V3" };
@@ -96,8 +95,8 @@ export class MeshAdapter {
     );
     this.spendScriptCbor = applyParamsToScript(this.spendCompileCode, [
       mPubKeyAddress(
-        deserializeAddress(owner || walletAddress).pubKeyHash,
-        deserializeAddress(owner || walletAddress).stakeCredentialHash,
+        deserializeAddress(owner).pubKeyHash,
+        deserializeAddress(owner).stakeCredentialHash,
       ),
     ]);
     this.spendScript = { code: this.spendScriptCbor, version: "V3" };
@@ -108,6 +107,7 @@ export class MeshAdapter {
       false,
     ).address;
   }
+
   /**
    * Retrieve wallet information required to build a transaction.
    *
@@ -125,7 +125,7 @@ export class MeshAdapter {
   }> => {
     const utxos = await this.wallet.getUtxos();
     const collaterals = await this.wallet.getCollateral();
-    const walletAddress = this.wallet.getChangeAddress();
+    const walletAddress = await this.wallet.getChangeAddress();
     if (!walletAddress)
       throw new Error("No wallet address found in getWalletForTx method.");
 
@@ -199,5 +199,26 @@ export class MeshAdapter {
    */
   protected getAddressUTXOAssets = async (address: string, unit: string) => {
     return await this.fetcher.fetchAddressUTxOs(address, unit);
+  };
+
+  protected metadataToCip68 = (metadata: any): Data => {
+    switch (typeof metadata) {
+      case "object":
+        if (metadata instanceof Array) {
+          return metadata.map((item) => this.metadataToCip68(item));
+        }
+        const metadataMap = new Map();
+        const keys = Object.keys(metadata);
+        keys.forEach((key) => {
+          metadataMap.set(key, this.metadataToCip68(metadata[key]));
+        });
+        return {
+          alternative: 0,
+          fields: [metadataMap, 1],
+        };
+
+      default:
+        return metadata;
+    }
   };
 }
