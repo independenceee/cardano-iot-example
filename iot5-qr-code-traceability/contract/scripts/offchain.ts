@@ -77,7 +77,7 @@ export class Contract extends MeshAdapter {
           quantity: quantity,
         },
       ])
-      .requiredSignerHash(deserializeAddress(walletAddress).pubKeyHash)
+    //   .requiredSignerHash(deserializeAddress(walletAddress).pubKeyHash)
       .changeAddress(walletAddress)
       .selectUtxosFrom(utxos)
       .txInCollateral(
