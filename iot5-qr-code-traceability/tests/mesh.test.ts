@@ -28,9 +28,11 @@ describe("Mint, Burn, Update, Remove Assets (NFT/TOKEN) CIP68", function () {
 
   test("Transaction", async function () {
     const tracking = await getTracking({
-      policyId: "2e5547c6bda9531d326087ce89864b260d097988bc04220cca4e42f9",
-      assetName: "000643b0487561776569205761746368204754352050726f",
+      unit: "2e5547c6bda9531d326087ce89864b260d097988bc04220cca4e42f9000643b0000643b0487561776569205761746368204754342050726f",
     });
-    console.log(tracking);
+    console.dir(tracking, {
+      depth: null,
+      colors: true
+    });
   });
 });

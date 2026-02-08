@@ -13,7 +13,6 @@ const wallet = new MeshWallet({
   },
 });
 
-// 0 => addr_test1qrrsqzvu048737jnqq7rd3ck07e7cnk75x5wmdlt9zv7ptmqwvk3ckjxl4wcf6ehtynh8lctuu85xxdg9c8v5pfnjn4shn35yc
 
 const owner =
   "addr_test1qrrsqzvu048737jnqq7rd3ck07e7cnk75x5wmdlt9zv7ptmqwvk3ckjxl4wcf6ehtynh8lctuu85xxdg9c8v5pfnjn4shn35yc";
@@ -74,6 +73,7 @@ export const update = async () => {
       location: "Hai Phong",
     },
   });
+  
   const signedTx = await wallet.signTx(unsignedTx, true);
   const txHash = await wallet.submitTx(signedTx);
   console.log(`https://preprod.cexplorer.io/tx/` + txHash);
@@ -83,6 +83,7 @@ export const update = async () => {
     });
   });
 };
+
 export const burn = async () => {
   const contract = new Contract({
     wallet: wallet,

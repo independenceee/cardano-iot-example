@@ -1,81 +1,101 @@
 "use server";
+
 import { deserializeDatum } from "@/lib/utils";
 import { BlockFrostAPI } from "@blockfrost/blockfrost-js";
 
-export const getTracking = async function ({
-  policyId,
-  assetName,
-}: {
-  policyId: string;
-  assetName: string;
-}) {
+interface HistoryEntry {
+  txHash: string;
+  datetime: number;
+  status: "Completed";
+  action: "Mint" | "Burn" | "Transfer" | "Update" | "Unknown";
+  metadata: Record<string, any>;
+  fee: string;
+}
+
+export const getTracking = async ({ unit }: { unit: string }) => {
   const blockfrostApi = new BlockFrostAPI({
     projectId: process.env.BLOCKFROST_API_KEY || "",
   });
-  const transacitons = await blockfrostApi.assetsTransactions(
-    policyId + assetName,
-  );
-  const histories = await Promise.all(
-    transacitons.map(async function ({ tx_hash }) {
-      const specialTransaction =
-        await blockfrostApi.txs(tx_hash);
-      const transaction =
-        await blockfrostApi.txsUtxos(tx_hash);
 
-      const assetInput = transaction.inputs.find(function (input) {
-        const asset = input.amount.find(function (amt) {
-          return amt.unit === policyId + assetName;
-        });
-        return asset !== undefined;
+  const assetTxRefs = await blockfrostApi.assetsTransactions(unit);
+
+  const histories: HistoryEntry[] = [];
+
+  for (const { tx_hash } of assetTxRefs) {
+    try {
+      const txInfo = await blockfrostApi.txs(tx_hash);
+      const utxos = await blockfrostApi.txsUtxos(tx_hash);
+
+      let inputQty = 0;
+      let outputQty = 0;
+
+      const inputWithAsset = utxos.inputs.find((input) =>
+        input.amount.some((a) => a.unit === unit),
+      );
+      if (inputWithAsset) {
+        const amt = inputWithAsset.amount.find((a) => a.unit === unit);
+        inputQty = Number(amt?.quantity || 0);
+      }
+
+      const outputWithAsset = utxos.outputs.find((output) =>
+        output.amount.some((a) => a.unit === unit),
+      );
+      if (outputWithAsset) {
+        const amt = outputWithAsset.amount.find((a) => a.unit === unit);
+        outputQty = Number(amt?.quantity || 0);
+      }
+
+      let action: HistoryEntry["action"] = "Unknown";
+      let quantityChange: number | undefined;
+
+      if (inputQty === 0 && outputQty > 0) {
+        action = "Mint";
+        quantityChange = outputQty;
+      } else if (outputQty === 0 && inputQty > 0) {
+        action = "Burn";
+        quantityChange = -inputQty;
+      } else if (inputQty > 0 && outputQty > 0) {
+        quantityChange = outputQty - inputQty;
+        if (quantityChange === 0) {
+          action = "Transfer";
+        } else {
+          action = "Update"; 
+        }
+      }
+
+      let rawDatum: string | undefined;
+      if (outputWithAsset?.inline_datum) {
+        rawDatum = outputWithAsset.inline_datum;
+      } else if (inputWithAsset?.inline_datum) {
+        rawDatum = inputWithAsset.inline_datum;
+      }
+
+      let metadata: any = {};
+      if (rawDatum) {
+        try {
+          metadata = await deserializeDatum(rawDatum);
+        } catch (err) {
+          console.error(`Deserialize datum failed for tx ${tx_hash}:`, err);
+        }
+      }
+
+      histories.push({
+        txHash: tx_hash,
+        datetime: txInfo.block_time,
+        fee: txInfo.fees,
+        status: "Completed",
+        action,
+        metadata,
       });
+    } catch (err) {
+      console.error(`Error processing tx ${tx_hash}:`, err);
+    }
+  }
+  histories.sort((a, b) => b.datetime - a.datetime);
+  const latestMetadata = histories[0]?.metadata || {};
 
-      const assetOutput = transaction.outputs.find(function (output) {
-        const asset = output.amount.find(function (amt) {
-          return amt.unit === policyId + assetName;
-        });
-        return asset !== undefined;
-      });
-
-      if (!assetInput && assetOutput) {
-        return {
-          metadata: assetOutput.inline_datum
-            ? await deserializeDatum(assetOutput.inline_datum)
-            : {},
-          txHash: tx_hash,
-          datetime: specialTransaction.block_time,
-          fee: specialTransaction.fees,
-          status: "Completed",
-          action: "Mint",
-        };
-      }
-
-      if (!assetOutput && assetInput) {
-        return {
-          metadata: assetInput.inline_datum
-            ? await deserializeDatum(assetInput.inline_datum)
-            : {},
-          txHash: tx_hash,
-          datetime: specialTransaction.block_time,
-          fee: specialTransaction.fees,
-          status: "Completed",
-          action: "Burn",
-        };
-      }
-
-      if (assetInput && assetOutput) {
-        return {
-          metadata: assetOutput.inline_datum
-            ? await deserializeDatum(assetOutput.inline_datum)
-            : {},
-          txHash: tx_hash,
-          datetime: specialTransaction.block_time,
-          fee: specialTransaction.fees,
-          status: "Completed",
-          action: "Update",
-        };
-      }
-    }),
-  );
-
-  return histories;
+  return {
+    metadata: latestMetadata,
+    transaction_history: histories,
+  };
 };

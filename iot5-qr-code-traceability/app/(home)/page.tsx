@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { QrCode, Camera } from 'lucide-react';
 
-export default function Home() {
+export default function Page() {
   return (
     <main>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center px-6 py-12">

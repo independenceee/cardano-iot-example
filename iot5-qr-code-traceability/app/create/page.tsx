@@ -1,106 +1,135 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import QRCode from "qrcode";
 import { QrCode, Download, ExternalLink, Sparkles } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { getProduct } from "@/actions/product";
+import Link from "next/link";
+
+const CIP68_LABEL = "000643b0";
+const MAX_ASSET_NAME_BYTES = 32;
+
+interface FormState {
+  issuer: string;
+  productName: string;
+}
+
+interface QRResult {
+  qrCodeUrl: string | null;
+  productUrl: string | null;
+  productId: string | null;
+  error: string | null;
+}
 
 export default function Create() {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     issuer: "",
     productName: "",
   });
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [productUrl, setProductUrl] = useState<string | null>(null);
-  const [productId, setProductId] = useState<string | null>(null);
+  const [qrResult, setQRResult] = useState<QRResult>({
+    qrCodeUrl: null,
+    productUrl: null,
+    productId: null,
+    error: null,
+  });
   const [submitted, setSubmitted] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-    setQrCodeUrl(null);
-    setFormError(null);
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setQRResult({
+      qrCodeUrl: null,
+      productUrl: null,
+      productId: null,
+      error: null,
+    });
+    setSubmitted(false);
+  }, []);
 
-    if (submitted) {
-      setSubmitted(false);
-      setProductId(null);
-      setProductUrl(null);
-    }
-  };
+  const trimmedIssuer = useMemo(() => form.issuer.trim(), [form.issuer]);
+  const trimmedProductName = useMemo(
+    () => form.productName.trim(),
+    [form.productName],
+  );
 
-  const { data: productData, isLoading, isFetching, error } = useQuery({
-    queryKey: ["product", form.issuer.trim(), form.productName.trim()],
-    queryFn: async () => {
-      const res = await fetch(`/api/product?issuer_address=${form.issuer.trim()}&product_name=${encodeURIComponent(form.productName.trim())}`);
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Không tìm thấy sản phẩm trên blockchain");
+ 
+  const generateQRCode = useCallback(
+    async (url: string): Promise<string | null> => {
+      try {
+        return await QRCode.toDataURL(url, {
+          errorCorrectionLevel: "H",
+          width: 512,
+          margin: 4,
+          color: { dark: "#1e293b", light: "#ffffff" },
+        });
+      } catch (err) {
+        return null;
       }
-      return res.json(); 
     },
-    enabled: submitted && !!form.issuer.trim() && !!form.productName.trim(),
+    [],
+  );
+
+  const {
+    data: product,
+    isLoading,
+    isFetching,
+    error: queryError,
+  } = useQuery({
+    queryKey: ["product", trimmedIssuer, trimmedProductName],
+    queryFn: async () =>
+      getProduct({
+        owner: trimmedIssuer,
+        assetName: trimmedProductName,
+      }),
+    enabled: submitted && !!trimmedIssuer && !!trimmedProductName,
     retry: 1,
     staleTime: 300_000,
   });
 
   useEffect(() => {
-    if (!productData || !submitted) return;
+    if (!product || !submitted) return;
 
-    const encoder = new TextEncoder();
-    const nameBytes = encoder.encode(form.productName.trim());
-    if (nameBytes.length > 32) {
-      setFormError("Tên sản phẩm quá dài (tối đa 32 bytes theo chuẩn Cardano)");
-      return;
-    }
+    const policyId = product.policyId as string;
 
-    const policyId = productData.policyId as string;
 
-    // Prefer assetNameHex from API if available, otherwise compute
-    let assetNameHex = productData.assetNameHex;
-    if (!assetNameHex) {
-      assetNameHex = Array.from(nameBytes)
-        .map(b => b.toString(16).padStart(2, "0"))
-        .join("");
-    }
+    const assetName = product.assetName as string
+    const productUrl = `${window.location.origin}/product/${policyId + assetName}`;
 
-    // Most common for CIP-68 reference/user tokens: label 100 = "000643b0"
-    const cip68Label = "000643b0";
-    const assetUnit = policyId + cip68Label + assetNameHex;
-
-    const id = assetUnit;
-    setProductId(id);
-
-    const url = `${window.location.origin}/product/${id}`;
-    setProductUrl(url);
-
-    QRCode.toDataURL(url, {
-      errorCorrectionLevel: "H",
-      width: 512,
-      margin: 4,
-      color: { dark: "#1e293b", light: "#ffffff" },
-    })
-      .then(setQrCodeUrl)
-      .catch(err => {
-        console.error(err);
-        setFormError("Lỗi tạo mã QR");
+    generateQRCode(productUrl).then((qrUrl) => {
+      setQRResult({
+        qrCodeUrl: qrUrl,
+        productUrl,
+        productId: policyId + assetName,
+        error: qrUrl ? null : "Lỗi tạo mã QR",
       });
-  }, [productData, submitted, form.productName]);
+    });
+  }, [
+    product,
+    submitted,
+    trimmedProductName,
+    generateQRCode,
+  ]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
 
-    const issuer = form.issuer.trim();
-    const name = form.productName.trim();
+      if (!trimmedIssuer || !trimmedProductName) return;
 
-    if (!issuer || !name) return;
+      setQRResult({
+        qrCodeUrl: null,
+        productUrl: null,
+        productId: null,
+        error: null,
+      });
+      setSubmitted(true);
+    },
+    [trimmedIssuer, trimmedProductName],
+  );
 
-    setFormError(null);
-    setSubmitted(true);
-  };
-
-  const isProcessing = submitted && (isLoading || isFetching || !qrCodeUrl);
+  const isProcessing =
+    submitted && (isLoading || isFetching || !qrResult.qrCodeUrl);
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 py-12 px-6 relative overflow-hidden">
@@ -108,14 +137,33 @@ export default function Create() {
 
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header giữ nguyên */}
+        <div className="text-center mb-12 md:mb-16 animate-in fade-in slide-in-from-top duration-700">
+          <div className="inline-flex items-center gap-3 mb-6 px-6 py-3 bg-gradient-to-r from-blue-100 to-emerald-100 rounded-full shadow-sm">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-emerald-600 rounded-full flex items-center justify-center shadow-md">
+              <QrCode className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-blue-800 font-semibold tracking-wide">
+              Transparent Product Traceability
+            </span>
+          </div>
 
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+            Verify Product Origin
+            <br className="hidden sm:block" />
+          </h1>
+
+          <p className="text-lg sm:text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
+            Create CIP-68 compliant QR codes to enable instant product origin
+            verification and build lasting consumer trust.
+          </p>
+        </div>
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Form */}
           <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-8 lg:p-10 border border-white/50">
             <form onSubmit={handleSubmit} className="space-y-7">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Policy ID <span className="text-red-500">*</span>
+                  Owner <span className="text-red-500">*</span>
                 </label>
                 <input
                   name="issuer"
@@ -124,15 +172,15 @@ export default function Create() {
                   value={form.issuer}
                   onChange={handleChange}
                   className={`w-full px-5 py-4 bg-white border ${
-                    formError ? "border-red-500" : "border-slate-200"
+                    qrResult.error ? "border-red-500" : "border-slate-200"
                   } rounded-xl focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 transition-all`}
-                  placeholder="Ví dụ: 0e14267a8020229adc0184dd25fa3174c3f7d6caadcb4425c70e7c04"
+                  placeholder="Ví dụ: addr_test1234abcd..."
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Tên sản phẩm <span className="text-red-500">*</span>
+                  Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   name="productName"
@@ -145,9 +193,9 @@ export default function Create() {
                 />
               </div>
 
-              {formError && (
+              {qrResult.error && (
                 <p className="text-red-600 text-center font-medium bg-red-50 py-3 rounded-xl">
-                  {formError}
+                  {qrResult.error}
                 </p>
               )}
 
@@ -170,44 +218,43 @@ export default function Create() {
 
           {/* QR Preview */}
           <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-8 lg:p-10 border border-white/50 flex flex-col items-center justify-center">
-            {qrCodeUrl ? (
-              <div className="text-center space-y-8">
+            {qrResult.qrCodeUrl ? (
+              <div className="text-center space-y-6">
                 <div>
                   <p className="text-lg font-medium text-slate-600 mb-2">
-                    Product ID (policy + asset name)
-                  </p>
-                  <p className="text-xl font-bold text-blue-600 font-mono tracking-wider break-all">
-                    {productId}
+                   {form.productName}
                   </p>
                 </div>
 
                 <div className="p-6 bg-white rounded-2xl shadow-inner">
                   <img
-                    src={qrCodeUrl}
+                    src={qrResult.qrCodeUrl}
                     alt="QR Code"
                     className="w-80 h-80 mx-auto"
                   />
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <a
-                    href={qrCodeUrl}
-                    download={`QR_${productId?.replace(/[^a-zA-Z0-9]/g, "_") || "sanpham"}.png`}
+                  <Link
+                    href={qrResult.qrCodeUrl}
+                    download={`QR_${qrResult.productId?.replace(/[^a-zA-Z0-9]/g, "_") || "sanpham"}.png`}
                     className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold rounded-xl hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
                     <Download className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
                     Tải QR
-                  </a>
+                  </Link>
 
-                  <a
-                    href={productUrl!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white font-semibold rounded-xl hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                  >
-                    <ExternalLink className="w-5 h-5" />
-                    Xem trang sản phẩm
-                  </a>
+                  {qrResult.productUrl && (
+                    <a
+                      href={qrResult.productUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white font-semibold rounded-xl hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                      Xem trang sản phẩm
+                    </a>
+                  )}
                 </div>
               </div>
             ) : (
@@ -222,9 +269,11 @@ export default function Create() {
                   QR sẽ dẫn trực tiếp đến trang sản phẩm trên website
                 </p>
 
-                {error && (
+                {queryError && (
                   <p className="mt-6 text-red-600 font-medium">
-                    {error instanceof Error ? error.message : "Có lỗi xảy ra"}
+                    {queryError instanceof Error
+                      ? queryError.message
+                      : "Có lỗi xảy ra"}
                   </p>
                 )}
               </div>
