@@ -81,24 +81,36 @@ export class MeshAdapter {
       blueprint,
       "traceability.mint.mint",
     );
-    this.mintScriptCbor = applyParamsToScript(this.mintCompileCode, [
-      mPubKeyAddress(
-        deserializeAddress(owner).pubKeyHash,
-        deserializeAddress(owner).stakeCredentialHash,
-      ),
-    ]);
+    this.mintScriptCbor = applyParamsToScript(
+      this.mintCompileCode,
+      [
+        [
+          mPubKeyAddress(
+            deserializeAddress(owner).pubKeyHash,
+            deserializeAddress(owner).stakeCredentialHash,
+          ),
+        ],
+      ],
+      "Mesh",
+    );
     this.mintScript = { code: this.mintScriptCbor, version: "V3" };
     this.policyId = resolveScriptHash(this.mintScriptCbor, "V3");
     this.spendCompileCode = this.readValidator(
       blueprint,
       "traceability.store.spend",
     );
-    this.spendScriptCbor = applyParamsToScript(this.spendCompileCode, [
-      mPubKeyAddress(
-        deserializeAddress(owner).pubKeyHash,
-        deserializeAddress(owner).stakeCredentialHash,
-      ),
-    ]);
+    this.spendScriptCbor = applyParamsToScript(
+      this.spendCompileCode,
+      [
+        [
+          mPubKeyAddress(
+            deserializeAddress(owner).pubKeyHash,
+            deserializeAddress(owner).stakeCredentialHash,
+          ),
+        ],
+      ],
+      "Mesh",
+    );
     this.spendScript = { code: this.spendScriptCbor, version: "V3" };
     this.contractAddress = serializePlutusScript(
       this.spendScript,
