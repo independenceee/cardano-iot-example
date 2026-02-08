@@ -24,7 +24,7 @@ export const mint = async () => {
     provider: provider,
     owner: owner,
   });
-  const assetName = "Huawei Watch GT4 Pro";
+  const assetName = "Huawei Watch GT5 Pro";
   const unsignedTx: string = await contract.mint({
     assetName: assetName,
     metadata: {
@@ -57,7 +57,7 @@ export const update = async () => {
     provider: provider,
     owner: owner,
   });
-  const assetName = "Huawei Watch GT4 Pro";
+  const assetName = "Huawei Watch GT5 Pro";
   const unsignedTx: string = await contract.update({
     assetName: assetName,
     metadata: {
@@ -71,7 +71,7 @@ export const update = async () => {
       image: "ipfs://QmYourIPFSHashhuaweiwatchgt4frontpng",
       mediaType: "image/png",
       roadmap: "[Ha Noi, Hung Yen, Hai Duong, Hai Phong]",
-      location: "Hai Duong",
+      location: "Hai Phong",
     },
   });
   const signedTx = await wallet.signTx(unsignedTx, true);

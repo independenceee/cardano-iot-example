@@ -1,11 +1,10 @@
-// app/page.tsx
 import Link from 'next/link';
 import { QrCode, Camera } from 'lucide-react';
 
 export default function Home() {
   return (
-    <>
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center px-6 py-12">
+    <main>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-5xl mx-auto text-center">
           {/* Header */}
           <div className="mb-12 animate-in fade-in slide-in-from-top duration-700">
@@ -97,7 +96,7 @@ export default function Home() {
             </p>
           </div>
         </div>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }
