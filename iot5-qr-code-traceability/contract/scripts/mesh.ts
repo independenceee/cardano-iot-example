@@ -13,6 +13,7 @@ import {
   mConStr0,
 } from "@meshsdk/core";
 import blueprint from "../plutus.json";
+import { blockfrostProvider } from "@/providers/cardano";
 
 /**
  * Class: MeshAdapter
@@ -125,6 +126,15 @@ export class MeshAdapter {
     this.mintScript = { code: this.mintScriptCbor, version: "V3" };
     this.policyId = resolveScriptHash(this.mintScriptCbor, "V3");
   }
+
+  // Rebuild MeshTxBuilder with the latest on-chain protocol params (cost models, etc.)
+  // so the script integrity hash matches the node's view (avoid PPViewHashesDontMatch).
+  protected resetTxBuilderWithLatestParams = async () => {
+    this.meshTxBuilder = new MeshTxBuilder({
+      fetcher: this.fetcher,
+      params: await blockfrostProvider.fetchProtocolParameters(),
+    });
+  };
 
   /**
    * Retrieve wallet information required to build a transaction.
