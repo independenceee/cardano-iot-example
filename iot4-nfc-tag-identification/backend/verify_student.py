@@ -2,14 +2,36 @@
 import os
 import sys
 import time
+import base64
 from datetime import datetime
+from nacl.signing import VerifyKey
+from nacl.exceptions import BadSignatureError
 from nfc import init_pn532, read_json_from_nfc
 from cardano import query_asset, check_connection
-from config import validate_config
+from config import validate_config, TAG_SIGNING_PUBLIC_KEY
 
 
 def clear_screen():
     os.system('clear' if os.name != 'nt' else 'cls')
+
+
+def verify_tag_signature(data, uid_hex):
+    """
+    Verify that the payload's signature was produced by our private key
+    for this exact (policy_id, asset_name, student_id, uid) combination.
+    A cloned tag will have a different physical UID, so a copied payload
+    will fail this check even if the JSON fields look identical.
+    """
+    try:
+        verify_key = VerifyKey(base64.b64decode(TAG_SIGNING_PUBLIC_KEY))
+        message = f"{data['p']}|{data['a']}|{data['s']}|{uid_hex}".encode()
+        signature = base64.b64decode(data["sig"])
+        verify_key.verify(message, signature)
+        return True
+    except (BadSignatureError, KeyError, ValueError):
+        return False
+    except Exception:
+        return False
 
 
 def verify_on_blockchain(policy_id, asset_name_hex, student_id):
@@ -94,7 +116,9 @@ def continuous_verify():
             uid_str, nfc_data = try_read_card(pn532)
 
             if uid_str and uid_str != last_uid:
-                if nfc_data and all(f in nfc_data for f in ["p", "a", "s"]):
+                has_fields = nfc_data and all(f in nfc_data for f in ["p", "a", "s", "sig"])
+
+                if has_fields and verify_tag_signature(nfc_data, uid_str):
                     last_result = verify_on_blockchain(
                         nfc_data["p"], nfc_data["a"], nfc_data["s"]
                     )
@@ -102,7 +126,7 @@ def continuous_verify():
                     last_uid = uid_str
                     display_result(last_result, last_scan_time)
                 else:
-                    last_result = {"verified": False, "error": "Invalid card data"}
+                    last_result = {"verified": False, "error": "Invalid or forged tag signature"}
                     last_scan_time = datetime.now().strftime("%H:%M:%S")
                     last_uid = uid_str
                     display_result(last_result, last_scan_time)
@@ -130,15 +154,27 @@ def verify_student():
     pn532 = init_pn532()
 
     print("\nPlace student card on reader...")
+    uid = pn532.read_passive_target(timeout=None)
+    uid_str = "".join(f"{b:02X}" for b in uid)
     data = read_json_from_nfc(pn532, num_blocks=8, debug=False)
 
     if not data:
         print("Could not read NFC tag")
         return None
 
-    if not all(f in data for f in ["p", "a", "s"]):
+    if not all(f in data for f in ["p", "a", "s", "sig"]):
         print("Invalid NFC data")
         return None
+
+    if not verify_tag_signature(data, uid_str):
+        print("✗ REJECTED: Invalid or forged tag signature (possible clone)")
+        result = {"verified": False, "error": "Invalid signature"}
+        print("\n" + "=" * 50)
+        print("✗ VERIFICATION FAILED")
+        print("=" * 50)
+        print(f"  Error: {result['error']}")
+        print("=" * 50)
+        return result
 
     print("Querying blockchain...")
     result = verify_on_blockchain(data["p"], data["a"], data["s"])

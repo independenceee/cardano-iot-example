@@ -6,6 +6,8 @@ load_dotenv()
 BLOCKFROST_PROJECT_ID = os.getenv("BLOCKFROST_PROJECT_ID", "")
 CARDANO_NETWORK = BLOCKFROST_PROJECT_ID[:7] if BLOCKFROST_PROJECT_ID else "preprod"
 MNEMONIC = os.getenv("MNEMONIC", "")
+TAG_SIGNING_PRIVATE_KEY = os.getenv("TAG_SIGNING_PRIVATE_KEY", "")
+TAG_SIGNING_PUBLIC_KEY = os.getenv("TAG_SIGNING_PUBLIC_KEY", "")
 
 BLOCKFROST_BASE_URL = {
     "mainnet": "https://cardano-mainnet.blockfrost.io/api",
@@ -22,4 +24,8 @@ def validate_config():
         errors.append("BLOCKFROST_PROJECT_ID not set")
     if not MNEMONIC:
         errors.append("MNEMONIC not set")
+    if not TAG_SIGNING_PRIVATE_KEY:
+        errors.append("TAG_SIGNING_PRIVATE_KEY not set")
+    if not TAG_SIGNING_PUBLIC_KEY:
+        errors.append("TAG_SIGNING_PUBLIC_KEY not set")
     return errors
