@@ -26,8 +26,14 @@ export const writeDataToContract = async () => {
   // Read sensor data
   console.log('📡 Step 1/5: Reading sensor data...');
   const sensorData = await readDHT22();
-  
-  if (!sensorData || !sensorData.temperature || !sensorData.humidity) {
+
+  if (
+    !sensorData ||
+    typeof sensorData.temperature !== 'number' ||
+    typeof sensorData.humidity !== 'number' ||
+    Number.isNaN(sensorData.temperature) ||
+    Number.isNaN(sensorData.humidity)
+  ) {
     console.error('❌ ERROR: No valid sensor data available');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     return;
