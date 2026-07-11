@@ -404,6 +404,30 @@ cardano-iot-example/
 - **Credentials:** Never commit `.env` files or `config.h` with real credentials
 - **Production:** Embed proper CA certificates and use secure credential storage
 
+### Securing the Wallet Mnemonic on Physical Devices
+
+Storing the mnemonic directly in a plain `.env` or `config.h` file is convenient for
+development, but it is a significant risk if the physical device (Raspberry Pi or ESP32)
+is lost, stolen, or otherwise compromised. For any real-world deployment, treat the
+mnemonic as a high-value secret and consider the following:
+
+- **Hardware Security Modules (HSM) / Secure Elements:** Store the seed inside a dedicated
+  secure element (e.g. ATECC608, YubiHSM, TPM 2.0) so the private key material never leaves
+  the chip and cannot be extracted from the device filesystem.
+- **Encrypt local secret files:** If a file-based secret is unavoidable, encrypt it at rest
+  (e.g. `age`, `sops`, or an OS keyring) and decrypt only in memory at runtime instead of
+  keeping the plaintext mnemonic on disk.
+- **Least privilege:** Use a dedicated hot wallet holding only the minimal funds required
+  for the device's operation, and keep the treasury/master keys offline.
+- **Rotate on compromise:** If a device is exposed, move funds and rotate the mnemonic
+  immediately.
+
+> **Note on scope:** This repository is intended for **educational and research purposes**.
+> The examples are deliberately kept as simple as possible so that developers can quickly
+> get familiar with the eUTxO architecture and stand up a working prototype. In a real
+> production system, the secret-management and security measures above should be implemented
+> in far more detail.
+
 ## License
 
 MIT

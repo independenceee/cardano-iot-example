@@ -187,7 +187,8 @@ validator locker(owner: VerificationKeyHash) {
     let token =
       input.output.value
         |> without_lovelace()
-    expect InlineDatum(datum_output_inline) = input.output.datum
+    let utxo_output = output_by_addr_value(outputs, script_address, token)
+    expect InlineDatum(datum_output_inline) = utxo_output.datum
     expect datum_output: Datum = datum_output_inline
     let owner_sign = tx.verify_signature(extra_signatories, owner)
     let authority_sign =

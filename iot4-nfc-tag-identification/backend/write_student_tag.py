@@ -1,14 +1,31 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import base64
+from nacl.signing import SigningKey
 from nfc import init_pn532, write_json_to_nfc, read_json_from_nfc
+from config import TAG_SIGNING_PRIVATE_KEY
 
 
-def prepare_nfc_data(policy_id, asset_name_hex, student_id):
+def prepare_nfc_data(policy_id, asset_name_hex, student_id, uid_hex):
+    """
+    Sign (policy_id, asset_name, student_id, uid) so that the payload is
+    cryptographically bound to this specific physical tag's UID. Copying
+    the JSON payload onto a blank/different tag will fail verification
+    because the UID used to check the signature will no longer match.
+    """
+    if not TAG_SIGNING_PRIVATE_KEY:
+        raise RuntimeError("TAG_SIGNING_PRIVATE_KEY not set in environment")
+
+    signing_key = SigningKey(base64.b64decode(TAG_SIGNING_PRIVATE_KEY))
+    message = f"{policy_id}|{asset_name_hex}|{student_id}|{uid_hex}".encode()
+    signature = signing_key.sign(message).signature
+
     return {
         "p": policy_id,
         "a": asset_name_hex,
         "s": student_id,
+        "sig": base64.b64encode(signature).decode(),
     }
 
 
@@ -18,7 +35,14 @@ def write_student_tag(policy_id, asset_name_hex, student_id):
     print(f"Asset Name Hex: {asset_name_hex}")
     print(f"Student ID: {student_id}")
 
-    nfc_data = prepare_nfc_data(policy_id, asset_name_hex, student_id)
+    pn532 = init_pn532()
+
+    print("\nPlace NFC tag on reader to bind signature to its UID...")
+    uid = pn532.read_passive_target(timeout=None)
+    uid_hex = "".join(f"{b:02X}" for b in uid)
+    print(f"Tag UID: {uid_hex}")
+
+    nfc_data = prepare_nfc_data(policy_id, asset_name_hex, student_id, uid_hex)
     print(f"\nNFC Data to write:")
     print(json.dumps(nfc_data, indent=2))
 
@@ -28,9 +52,7 @@ def write_student_tag(policy_id, asset_name_hex, student_id):
     if data_size > 96:
         print("WARNING: Data exceeds 96 bytes, may need multiple sectors")
 
-    pn532 = init_pn532()
-
-    print("\nPlace NFC tag on reader...")
+    print("\nWriting to tag already on reader...")
     success = write_json_to_nfc(pn532, nfc_data, debug=True)
 
     if success:
@@ -50,7 +72,7 @@ def write_student_tag(policy_id, asset_name_hex, student_id):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Write student NFT reference to NFC tag")
+    parser = argparse.ArgumentParser(description="Write signed student NFT reference to NFC tag")
     parser.add_argument("--policy", required=True, help="Policy ID (hex)")
     parser.add_argument("--asset", required=True, help="Asset name (hex)")
     parser.add_argument("--id", required=True, help="Student ID")
